@@ -1,7 +1,5 @@
 {
-    "ticker_list_url": "https://en.wikipedia.org/wiki/FTSE_100_Index",
-    "max_tickers": 15,
-    "gap_threshold": 2.0,
-    "min_volume": 1000000,
-    "trading_hours": ["08:00-16:30"]
+  "ticker_list_url": "https://en.wikipedia.org/wiki/FTSE_100_Index",
+  "gap_threshold": 2.0,
+  "min_volume": 1000000
 }
