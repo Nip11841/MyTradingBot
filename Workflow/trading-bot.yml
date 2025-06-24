@@ -1,0 +1,44 @@
+name: Trading Bot Scanner
+
+on:
+  schedule:
+    # Run every 30 minutes during UK market hours (8:00-16:30 GMT)
+    - cron: '*/30 8-16 * * 1-5'
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  scan-and-trade:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        pip install pandas requests yfinance lxml
+        pip install gspread google-auth google-auth-oauthlib google-auth-httplib2
+    
+    - name: Create credentials file
+      run: |
+        echo '${{ secrets.GOOGLE_CREDENTIALS }}' > creds.json
+    
+    - name: Run trading scanner
+      run: |
+        python scanner.py
+        
+    - name: Update spreadsheet
+      run: |
+        python update_sheet.py
+    
+    - name: Send notifications
+      if: always()
+      run: |
+        python send_alerts.py
