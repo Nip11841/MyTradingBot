@@ -1,33 +1,39 @@
-# From the GitHub structure - with configurable thresholds and error handling
-import yfinance as yf
+# scanner.py - Fixed version matching your setup
+import requests
 import pandas as pd
-import json
 from datetime import datetime
 
-with open('config.json') as f:
-    config = json.load(f)
-
 def scan_gaps():
-    ftse = pd.read_html(config['ticker_list_url'])[4]
-    tickers = [t + '.L' for t in ftse['Ticker'].tolist()][:config['max_tickers']]
-    
-    alerts = []
-    for t in tickers:
-        try:
-            data = yf.download(t, period='2d', interval='1m', prepost=True)
-            if len(data) > 30:
-                prev_close = data['Close'].iloc[-2]
-                curr_open = data['Open'].iloc[-1]
-                gap_pct = (curr_open - prev_close) / prev_close * 100
+    try:
+        # Get FTSE 100 tickers
+        ftse = pd.read_html('https://en.wikipedia.org/wiki/FTSE_100_Index')[4]
+        tickers = [t + '.L' for t in ftse['Ticker'].tolist()][:10]  # Top 10
+        
+        alerts = []
+        for t in tickers:
+            try:
+                # Get price data
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}?interval=1m&range=2d"
+                data = requests.get(url).json()['chart']['result'][0]
+                prev_close = data['meta']['previousClose']
+                curr_price = data['indicators']['quote'][0]['open'][-1]
+                volume = data['indicators']['quote'][0]['volume'][-1]
                 
-                if (abs(gap_pct) > config['gap_threshold'] and 
-                    data['Volume'].iloc[-1] > config['min_volume']):
+                # Check gap
+                gap_pct = (curr_price - prev_close) / prev_close * 100
+                if abs(gap_pct) > 2.0 and volume > 1000000:
                     alerts.append({
                         'ticker': t,
                         'gap_pct': round(gap_pct, 2),
-                        'time': datetime.now().strftime("%H:%M")
+                        'time': datetime.now().strftime("%H:%M:%S"),
+                        'entry_price': curr_price
                     })
-        except Exception as e:
-            print(f"Error with {t}: {str(e)}")
-    
-    return alerts
+            except:
+                continue
+        return alerts
+    except Exception as e:
+        print(f"Scanner error: {e}")
+        return []
+
+if __name__ == "__main__":
+    print(scan_gaps())
